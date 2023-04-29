@@ -21,8 +21,9 @@ def evaluate(particle, benchmark=True, box_da=False):
     if benchmark:
         prec_input_file = "inputs/infiltration.dat"
         calibration_input_file = "inputs/observed_benchmark.csv"
-        observed_outflow = pd.read_csv(calibration_input_file)['QOUT']
-        modeled = run_richards_benchmark.run_Richards(prec_input_file, pars)['QOUT']
+        observed_outflow = pd.read_csv(calibration_input_file)['S']
+        modeled = run_richards_benchmark.run_Richards(prec_input_file, pars)['S']
+        modeled = (modeled - modeled.min()) / 10
 
     else:
         prec_input_file = "inputs/rainfall_pp_filtered.csv"

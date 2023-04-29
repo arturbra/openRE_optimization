@@ -10,10 +10,10 @@ import run_BO
 
 
 if __name__ == '__main__':
-    # #Run for the benchmark
-    prec_input_file = "inputs/infiltration.dat"
-    pars = {'thetaR': 0.131, 'thetaS': 0.396, 'alpha': 0.423, 'n': 2.06, 'Ks': 3.32, 'psi0': 13.5, 'neta': 0.5, 'Ss': 0.000001}
-    wb = run_richards_benchmark.run_Richards(prec_input_file, pars)
+    #Run for the benchmark
+    # prec_input_file = "inputs/infiltration.dat"
+    # pars = {'thetaR': 0.131, 'thetaS': 0.396, 'alpha': 0.423, 'n': 2.06, 'Ks': 3.32, 'psi0': 13.5, 'neta': 0.5, 'Ss': 0.000001}
+    # wb = run_richards_benchmark.run_Richards(prec_input_file, pars)
     # wb['S'] = (wb['S'] - min(wb['S'])) / 10
 
 
@@ -37,20 +37,20 @@ if __name__ == '__main__':
 
     
     # ## GA calibration benchmark
-    setup_file = "inputs/setup_file.ini"
-    calibration = GA_model.Calibration(setup_file)
-
-    toolbox = run_GA.initialize_toolbox(calibration, benchmark=True)
-    toolbox.register("map", futures.map)
-
-    for s in range(1, 4):
-        run_GA.water_flow_calibration(toolbox, calibration, s)
-
-    # ## PSO benchmark
-    # toolbox = run_PSO.create_toolbox()
+    # setup_file = "inputs/setup_file.ini"
+    # calibration = GA_model.Calibration(setup_file)
+    #
+    # toolbox = run_GA.initialize_toolbox(calibration, benchmark=True)
     # toolbox.register("map", futures.map)
+    #
     # for s in range(1, 4):
-    #     _, logbook, best_params = run_PSO.run_pso(toolbox, s)
+    #     run_GA.water_flow_calibration(toolbox, calibration, s)
+
+    ## PSO benchmark
+    toolbox = run_PSO.create_toolbox()
+    toolbox.register("map", futures.map)
+    for s in range(1, 4):
+        _, logbook, best_params = run_PSO.run_pso(toolbox, s)
 
     # ## GA calibration pp
     # setup_file = "inputs/setup_file.ini"
