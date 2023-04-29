@@ -77,10 +77,11 @@ class Calibration:
         pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'psi0': psi0, 'neta': 0.5, 'Ss': 0.000001}
         calibration_input_file = "inputs/observed_benchmark.csv"
 
-        wb = run_richards_benchmark.run_Richards(prec_input_file, pars)['QOUT']
-        penalty = self.penalty(individual)
+        wb = run_richards_benchmark.run_Richards(prec_input_file, pars)['S']
+        wb = (wb - wb.min()) / 10
 
-        obs_df = pd.read_csv(calibration_input_file)['QOUT']
+        penalty = self.penalty(individual)
+        obs_df = pd.read_csv(calibration_input_file)['S']
 
         nash_outflow = self.nash_sutcliffe_efficiency(obs_df, wb)
         nash = nash_outflow + penalty

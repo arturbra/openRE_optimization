@@ -11,13 +11,14 @@ import run_BO
 
 if __name__ == '__main__':
     # #Run for the benchmark
-    # prec_input_file = "inputs/infiltration.dat"
-    # pars = {'thetaR': 0.1, 'thetaS': 0.2, 'alpha': 0.5, 'n': 2, 'Ks': 0.04, 'psi0': 3.5, 'neta': 0.5, 'Ss': 0.000001}
-    # wb = run_richards_benchmark.run_Richards(prec_input_file, pars)
-    #
+    prec_input_file = "inputs/infiltration.dat"
+    pars = {'thetaR': 0.131, 'thetaS': 0.396, 'alpha': 0.423, 'n': 2.06, 'Ks': 3.32, 'psi0': 13.5, 'neta': 0.5, 'Ss': 0.000001}
+    wb = run_richards_benchmark.run_Richards(prec_input_file, pars)
+    # wb['S'] = (wb['S'] - min(wb['S'])) / 10
+
+
     #
     #Run for the PP
-
     #
     # individual = [0.11794939522713252, 0.5014643011668757, 0.5697775404333506, 10.0, 0.9071343643361653, 9.964788249998058]
     # pars = {'thetaR': individual[0], 'thetaS': individual[1], 'alpha': individual[2], 'n': individual[3], 'Ks': individual[4], 'psi0': individual[5], 'neta': 0.5, 'Ss': 0.000001}
@@ -36,20 +37,20 @@ if __name__ == '__main__':
 
     
     # ## GA calibration benchmark
-    # setup_file = "inputs/setup_file.ini"
-    # calibration = GA_model.Calibration(setup_file)
-    #
-    # toolbox = run_GA.initialize_toolbox(calibration, benchmark=True)
-    # toolbox.register("map", futures.map)
-    #
-    # for s in range(1, 4):
-    #     run_GA.water_flow_calibration(toolbox, calibration, s)
+    setup_file = "inputs/setup_file.ini"
+    calibration = GA_model.Calibration(setup_file)
 
-    ## PSO benchmark
-    toolbox = run_PSO.create_toolbox()
+    toolbox = run_GA.initialize_toolbox(calibration, benchmark=True)
     toolbox.register("map", futures.map)
+
     for s in range(1, 4):
-        _, logbook, best_params = run_PSO.run_pso(toolbox, s)
+        run_GA.water_flow_calibration(toolbox, calibration, s)
+
+    # ## PSO benchmark
+    # toolbox = run_PSO.create_toolbox()
+    # toolbox.register("map", futures.map)
+    # for s in range(1, 4):
+    #     _, logbook, best_params = run_PSO.run_pso(toolbox, s)
 
     # ## GA calibration pp
     # setup_file = "inputs/setup_file.ini"
