@@ -10,12 +10,22 @@ import run_BO
 
 
 if __name__ == '__main__':
-    #Run for the benchmark
+    # #Run for the benchmark
     # prec_input_file = "inputs/infiltration.dat"
-    # pars = {'thetaR': 0.131, 'thetaS': 0.396, 'alpha': 0.423, 'n': 2.06, 'Ks': 3.32, 'psi0': 13.5, 'neta': 0.5, 'Ss': 0.000001}
+    # individual = [0.131, 0.396, 0.423, 2.06, 3.52]
+    # # pars = {'thetaR': 0.131, 'thetaS': 0.396, 'alpha': 0.423, 'n': 2.06, 'Ks': 3.32, 'psi0': 13.5, 'neta': 0.5, 'Ss': 0.000001}
+    # pars = {'thetaR': individual[0], 'thetaS': individual[1], 'alpha': individual[2], 'n': individual[3], 'Ks': individual[4], 'neta': 0.5, 'Ss': 0.000001}
     # wb = run_richards_benchmark.run_Richards(prec_input_file, pars)
     # wb['S'] = (wb['S'] - min(wb['S'])) / 10
-
+    #
+    # calibration_input_file = "inputs/observed_benchmark.csv"
+    # obs_df = pd.read_csv(calibration_input_file)['S']
+    # # obs_df = obs_df[:len(wb)].shift(-2)
+    # nash = run_BO.nash_sutcliffe_efficiency(obs_df, wb['S'])
+    # print(nash)
+    # plt.plot(wb['S'])
+    # plt.plot(obs_df)
+    # plt.show()
 
     #
     #Run for the PP

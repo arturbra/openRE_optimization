@@ -54,12 +54,7 @@ class Calibration:
         else:
             pen4 = -10
 
-        if self.psi0_min <= individual[5] <= self.psi0_max:
-            pen5 = 0
-        else:
-            pen5 = -10
-
-        pen_total = pen0 + pen1 + pen2 + pen3 + pen4 + pen5
+        pen_total = pen0 + pen1 + pen2 + pen3 + pen4
         return pen_total
 
     def get_individual_values(self, individual):
@@ -68,13 +63,12 @@ class Calibration:
         alpha = individual[2]
         n = individual[3]
         Ks = individual[4]
-        psi0 = individual[5]
-        return thetaR, thetaS, alpha, n, Ks, psi0
+        return thetaR, thetaS, alpha, n, Ks
 
     def evaluate_by_nash_benchmark(self, individual):
         prec_input_file = "inputs/infiltration.dat"
-        thetaR, thetaS, alpha, n, Ks, psi0 = self.get_individual_values(individual)
-        pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'psi0': psi0, 'neta': 0.5, 'Ss': 0.000001}
+        thetaR, thetaS, alpha, n, Ks = self.get_individual_values(individual)
+        pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'neta': 0.5, 'Ss': 0.000001}
         calibration_input_file = "inputs/observed_benchmark.csv"
 
         wb = run_richards_benchmark.run_Richards(prec_input_file, pars)['S']
@@ -90,7 +84,7 @@ class Calibration:
     def evaluate_by_nash_pp(self, individual, box_da=True):
         prec_pp = "inputs/rainfall_pp_filtered.csv"
         thetaR, thetaS, alpha, n, Ks, psi0 = self.get_individual_values(individual)
-        pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'psi0': psi0, 'neta': 0.5, 'Ss': 0.000001}
+        pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'neta': 0.5, 'Ss': 0.000001}
 
         if box_da:
             calibration_input_file = "inputs/outflow_clipped_box_da.csv"

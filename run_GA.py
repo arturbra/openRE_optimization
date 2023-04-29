@@ -60,10 +60,9 @@ def initialize_toolbox(calibration, benchmark=True):
     toolbox.register("alpha", random.uniform, calibration.alpha_min, calibration.alpha_max)
     toolbox.register("n", random.uniform, calibration.n_min, calibration.n_max)
     toolbox.register("Ks", random.uniform, calibration.Ks_min, calibration.Ks_max)
-    toolbox.register("psi0", random.uniform, calibration.psi0_min, calibration.psi0_max)
 
     toolbox.register("individual", tools.initCycle, creator.Individual,
-                     (toolbox.thetaR, toolbox.thetaS, toolbox.alpha, toolbox.n, toolbox.Ks, toolbox.psi0))
+                     (toolbox.thetaR, toolbox.thetaS, toolbox.alpha, toolbox.n, toolbox.Ks))
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
 
     if benchmark:
