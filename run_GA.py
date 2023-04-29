@@ -26,7 +26,7 @@ def bounded_mutGaussian_single_gene(individual, mu, sigmas, lower_bound, upper_b
     return individual,
 
 
-def save_generation_stats(population, generation, seed):
+def save_generation_stats(population, generation):
     fits = [ind.fitness.values[0] for ind in population]
     min_fit = min(fits)
     max_fit = max(fits)
@@ -48,13 +48,7 @@ def save_generation_stats(population, generation, seed):
                    'avg_fitness': avg_fit,
                    'std_dev_fitness': std_dev}
 
-    # Append the current generation's data as a new line to the JSON file
-    json_filename = f"GA_seed{seed}_benchmark.json"
-    result_json_string = json.dumps(result_dict)
-    with open(json_filename, "a") as outfile:
-        outfile.write(result_json_string + '\n')
-
-    return min_fit, avg_fit, max_fit, best_ind, best_fit, std_dev
+    return result_dict
 
 
 def initialize_toolbox(calibration, benchmark=True):
@@ -106,6 +100,7 @@ def water_flow_calibration(toolbox, calib, s):
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
+    generation_stats = []
     for g in range(ngen):
         tic = time.time()
         print("=========================")
@@ -138,22 +133,27 @@ def water_flow_calibration(toolbox, calib, s):
         best_ind = tools.selBest(pop, 1)[0]
         pop[:] = offspring[:-1] + [best_ind]
 
-        min_fit, avg_fit, max_fit, best_ind, best_fit, std_dev = save_generation_stats(pop, g, s)
+        gen_stats = save_generation_stats(pop, g)
+        generation_stats.append(gen_stats)
 
         print(f"Generation {g}:")
-        print(f"  Min Fitness: {min_fit}")
-        print(f"  Max Fitness: {max_fit}")
-        print(f"  Avg Fitness: {avg_fit}")
-        print(f"  Std Dev Fitness: {std_dev}")
-        print(f"  Best Individual: {best_ind}")
-        print(f"  Best Fitness: {best_fit}")
+        print(f"  Min Fitness: {gen_stats['min_fitness']}")
+        print(f"  Max Fitness: {gen_stats['max_fitness']}")
+        print(f"  Avg Fitness: {gen_stats['avg_fitness']}")
+        print(f"  Std Dev Fitness: {gen_stats['std_dev_fitness']}")
+        print(f"  Best Individual: {gen_stats['individual']}")
+        print(f"  Best Fitness: {gen_stats['fitness']}")
 
         runtime = time.time() - tic
         time_left = runtime * (ngen - g) / 60
-        print('approx time left = %.2f minutes' % (time_left))
+        print(f'approx time left = {time_left: .2f} minutes')
 
     best_ind = tools.selBest(pop, 1)[0]
     print("Done!")
     print("Best_ind:", best_ind, "Best_fit:", best_ind.fitness.values)
+
+    json_filename = f"GA_seed{s}_benchmark.json"
+    with open(json_filename, "w") as outfile:
+        json.dump(generation_stats, outfile)
 
 
