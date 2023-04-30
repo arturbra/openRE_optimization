@@ -34,7 +34,18 @@ def evaluate_pp(particle, box_da=False):
     return nash_sutcliffe_efficiency(observed_outflow, modeled),
 
 
-def evaluate_benchmark(particle, benchmark=True, box_da=False):
+def evaluate_benchmark(particle):
+    pars = {'thetaR': particle[0], 'thetaS': particle[1], 'alpha': particle[2], 'n': particle[3], 'Ks': particle[4], 'neta': 0.5, 'Ss': 0.000001}
+    prec_input_file = "inputs/infiltration.dat"
+    calibration_input_file = "inputs/observed_benchmark.csv"
+    observed_outflow = pd.read_csv(calibration_input_file)['S']
+    modeled = run_richards_benchmark.run_Richards(prec_input_file, pars)['S']
+    modeled = (modeled - modeled.min()) / 10
+
+    return nash_sutcliffe_efficiency(observed_outflow, modeled),
+
+
+def evaluate(particle, benchmark=True, box_da=False):
     pars = {'thetaR': particle[0], 'thetaS': particle[1], 'alpha': particle[2], 'n': particle[3], 'Ks': particle[4], 'neta': 0.5, 'Ss': 0.000001}
     if benchmark:
         prec_input_file = "inputs/infiltration.dat"
@@ -42,6 +53,20 @@ def evaluate_benchmark(particle, benchmark=True, box_da=False):
         observed_outflow = pd.read_csv(calibration_input_file)['S']
         modeled = run_richards_benchmark.run_Richards(prec_input_file, pars)['S']
         modeled = (modeled - modeled.min()) / 10
+
+    else:
+        prec_input_file = "inputs/rainfall_pp_filtered.csv"
+
+        if box_da:
+            calibration_input_file = "inputs/outflow_clipped_box_da.csv"
+
+        else:
+            calibration_input_file = "inputs/outflow_clipped_box_dc.csv"
+
+        modeled = run_richards_pp.run_Richards(prec_input_file, pars)['S']
+        modeled = (modeled - modeled.min()) / 10
+
+        observed_outflow = pd.read_csv(calibration_input_file)['flow']
 
     return nash_sutcliffe_efficiency(observed_outflow, modeled),
 
@@ -58,15 +83,14 @@ def create_particle():
     alpha_max = float(setup['FLOW_CALIBRATION']['alpha_max'])
     n_min = float(setup['FLOW_CALIBRATION']['n_min'])
     n_max = float(setup['FLOW_CALIBRATION']['n_max'])
-    Ks_min = float(setup['FLOW_CALIBRATION']['Ks_min'])
-    Ks_max = float(setup['FLOW_CALIBRATION']['Ks_max'])
-    psi0_min = float(setup['FLOW_CALIBRATION']['psi0_min'])
-    psi0_max = float(setup['FLOW_CALIBRATION']['psi0_max'])
+    Ks_min = float(setup['FLOW_CALIBRATION']['ks_min'])
+    Ks_max = float(setup['FLOW_CALIBRATION']['ks_max'])
 
-    pmin = [thetaR_min, thetaS_min, alpha_min, n_min, Ks_min, psi0_min]
-    pmax = [thetaR_max, thetaS_max, alpha_max, n_max, Ks_max, psi0_max]
-    smin = [-0.05, -0.15, -0.5, -4.5, -4]
-    smax = [0.05, 0.15, 0.5, 4.5, 4]
+    pmin = [thetaR_min, thetaS_min, alpha_min, n_min, Ks_min]
+    pmax = [thetaR_max, thetaS_max, alpha_max, n_max, Ks_max]
+    scaling_factor = 0.2
+    smin = [-scaling_factor * (pmax[i] - pmin[i]) for i in range(len(pmin))]
+    smax = [scaling_factor * (pmax[i] - pmin[i]) for i in range(len(pmax))]
 
     part = creator.Particle([random.uniform(pmin[i], pmax[i]) for i in range(5)])
     part.speed = [random.uniform(smin[i], smax[i]) for i in range(5)]
@@ -75,7 +99,7 @@ def create_particle():
     return part
 
 
-def update_particle(part, best, phi1, phi2):
+def update_particle(part, best, phi1, phi2, w=0.7298):
     setup = configparser.ConfigParser()
     setup_file = "inputs/setup_file.ini"
     setup.read(setup_file)
@@ -85,8 +109,8 @@ def update_particle(part, best, phi1, phi2):
     thetaS_max = float(setup['FLOW_CALIBRATION']['thetaS_max'])
     alpha_min = float(setup['FLOW_CALIBRATION']['alpha_min'])
     alpha_max = float(setup['FLOW_CALIBRATION']['alpha_max'])
-    Ks_min = float(setup['FLOW_CALIBRATION']['Ks_min'])
-    Ks_max = float(setup['FLOW_CALIBRATION']['Ks_max'])
+    Ks_min = float(setup['FLOW_CALIBRATION']['ks_min'])
+    Ks_max = float(setup['FLOW_CALIBRATION']['ks_max'])
     n_min = float(setup['FLOW_CALIBRATION']['n_max'])
     n_max = float(setup['FLOW_CALIBRATION']['n_max'])
 
@@ -98,7 +122,7 @@ def update_particle(part, best, phi1, phi2):
     v_u1 = map(lambda x: x[0] * (part.best[x[1]] - part[x[1]]), zip(u1, range(len(part))))
     v_u2 = map(lambda x: x[0] * (best[x[1]] - part[x[1]]), zip(u2, range(len(part))))
 
-    part.speed = list(map(lambda x: x[0] + x[1] + x[2], zip(part.speed, v_u1, v_u2)))
+    part.speed = list(map(lambda x: w * x[0] + x[1] + x[2], zip(part.speed, v_u1, v_u2)))
     for i, speed in enumerate(part.speed):
         if abs(speed) < part.smin[i]:
             part.speed[i] = np.sign(speed) * part.smin[i]
@@ -120,7 +144,7 @@ def update_particle(part, best, phi1, phi2):
             part[i] = new_pos
 
 
-def create_toolbox(benchmark=True):
+def create_toolbox():
     
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Particle", list, fitness=creator.FitnessMax, speed=list,
@@ -129,10 +153,8 @@ def create_toolbox(benchmark=True):
     toolbox.register("particle", create_particle)
     toolbox.register("population", tools.initRepeat, list, toolbox.particle)
     toolbox.register("update", update_particle, phi1=2.0, phi2=2.0)
-    if benchmark:
-        toolbox.register("evaluate", evaluate_benchmark)
-    else:
-        toolbox.register("evaluate", evaluate_pp)
+    toolbox.register("evaluate", evaluate)
+
     return toolbox
 
 
@@ -168,7 +190,7 @@ def run_pso(toolbox, s):
     stats.register("max", np.max)
 
     logbook = tools.Logbook()
-    logbook.header = ["gen", "evals", "time", "best_particle"] + stats.fields
+    logbook.header = ["gen", "evals", "time", "best_particle", "best_fitness"] + stats.fields
 
     best = None
     print("Calibration started:")
@@ -202,6 +224,7 @@ def run_pso(toolbox, s):
             "evals": len(pop),
             "time": gen_time,
             'best_particle': best,
+            'best_fitness': best.fitness.values,
             "avg": stats.compile(pop)["avg"],
             "min": stats.compile(pop)["min"],
             "max": stats.compile(pop)["max"]

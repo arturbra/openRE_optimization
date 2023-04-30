@@ -57,9 +57,9 @@ if __name__ == '__main__':
     #     run_GA.water_flow_calibration(toolbox, calibration, s)
 
     ## PSO benchmark
-    toolbox = run_PSO.create_toolbox(benchmark=True)
+    toolbox = run_PSO.create_toolbox()
     toolbox.register("map", futures.map)
-    for s in range(1, 4):
+    for s in range(2, 4):
         _, logbook, best_params = run_PSO.run_pso(toolbox, s)
 
 
