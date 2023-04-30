@@ -57,15 +57,15 @@ if __name__ == '__main__':
     #     run_GA.water_flow_calibration(toolbox, calibration, s)
 
     ## PSO benchmark
-    toolbox = run_PSO.create_toolbox()
+    toolbox = PSO_old.create_toolbox()
     toolbox.register("map", futures.map)
-    for s in range(2, 4):
-        _, logbook, best_params = run_PSO.run_pso(toolbox, s)
-
-
-    ## BO benchmark
     for s in range(1, 4):
-        run_BO.run_bayesian_optimization(s, benchmark=True)
+        _, logbook, best_params = PSO_old.run_pso(s, toolbox)
+
+
+    # ## BO benchmark
+    # for s in range(2, 4):
+    #     run_BO.run_bayesian_optimization(s, benchmark=True)
 
     # ## GA calibration pp
     # setup_file = "inputs/setup_file.ini"

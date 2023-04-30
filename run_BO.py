@@ -8,11 +8,8 @@ import time
 import json
 import configparser
 
-def custom_callback(res, seed):
+def custom_callback(res, all_results):
     current_params = res.x_iters[-1]
-    # current_modeled = run_Richards(PREC_INPUT_FILE, get_param_dict(current_params))['S']
-    # current_modeled = (current_modeled - current_modeled.min()) / 10
-    # current_nse = nash_sutcliffe_efficiency(observed_outflow, current_modeled)
     iteration = len(res.func_vals)
 
     # Find the best NSE so far and its corresponding parameters
@@ -23,16 +20,11 @@ def custom_callback(res, seed):
     result_dict = {
         "iteration": iteration,
         "parameters": current_params,
-        # "nse": current_nse,
         "best_parameters": best_params_so_far,
         "best_nse": best_nse_so_far
     }
 
-    json_filename = f"bayesian_optimization_seed{seed}_box_dc.json"
-    result_json_string = json.dumps(result_dict)
-    with open(json_filename, "a") as outfile:
-        outfile.write(result_json_string + '\n')
-
+    all_results.append(result_dict)
     print(f"Iteration {iteration}")
 
     if iteration % 10 == 0:
@@ -97,32 +89,32 @@ def run_bayesian_optimization(seed, benchmark=True):
     ]
 
     # Run Bayesian Optimization
+    all_results = []
     start_time = time.time()
     if benchmark:
         result = gp_minimize(func=objective_function_benchmark,
                              dimensions=search_space,
                              n_calls=500,
                              random_state=seed,
-                             callback=[lambda res: custom_callback(res, seed)])
+                             callback=[lambda res: custom_callback(res, all_results)])
     else:
         result = gp_minimize(func=objective_function_pp,
                              dimensions=search_space,
                              n_calls=500,
                              random_state=seed,
-                             callback=[lambda res: custom_callback(res, seed)])
+                             callback=[lambda res: custom_callback(res, all_results)])
 
     end_time = time.time()
     total_time = (end_time - start_time) / 60
-    t_time = {"total time": total_time}
-    time_json_string = json.dumps(t_time)
+    print(f'Total time: {total_time: .2f} minutes')
     json_filename = f"bayesian_optimization_seed{seed}_benchmark.json"
     # Get the best parameters
     best_params = result.x
     best_nse = -result.fun
 
     # Save results to a JSON file
-    with open(json_filename, "a") as outfile:
-        outfile.write(time_json_string + '\n')
+    with open(json_filename, "w") as outfile:
+        json.dump(all_results, outfile)
 
     print("Best parameters:", best_params)
     print("Best NSE:", best_nse)
