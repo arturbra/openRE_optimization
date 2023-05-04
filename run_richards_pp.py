@@ -20,7 +20,7 @@ def run_Richards(wb, pars):
     n = len(z)
 
     # Initial condition:
-    psi0 = np.zeros(n) - pars['psi0']
+    psi0 = np.zeros(n) - 10
 
     # Run model m times
     psi, wb = run_RE(dt, t, dz, zN, n, psi0, qT, qB, pars)

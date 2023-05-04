@@ -9,7 +9,7 @@ import re
 import numpy as np
 import seaborn as sns
 
-def read_json_file_GA(file_name):
+def read_json_file_GA_pp(file_name):
     generation_list = []
     individual_list = []
     fitness_list = []
@@ -26,6 +26,92 @@ def read_json_file_GA(file_name):
     return generation_list, individual_list, fitness_list, avg_fitness_list
 
 
+def read_json_file_GA_benchmark(file_name):
+    with open(file_name, 'r') as file:
+        data = json.load(file)
+
+    individuals = []
+    generations = []
+    fitness_values = []
+    avg_fitness_values = []
+
+    for entry in data:
+        individuals.append(entry['individual'])
+        generations.append(entry['generation'])
+        fitness_values.append(entry['fitness'][0])  # Assuming fitness is always a list with a single value
+        avg_fitness_values.append(entry['avg_fitness'])
+
+    return generations, individuals, fitness_values, avg_fitness_values
+
+
+def read_json_file_PSO_benchmark(file_name):
+    with open(file_name, 'r') as f:
+        data = json.load(f)
+
+    generations = []
+    best_particles = []
+    best_fitnesses = []
+    averages = []
+
+    for entry in data:
+        generations.append(entry['gen'])
+        best_particles.append(entry['best_particle'])
+        best_fitnesses.append(entry['best_fitness'][0])
+        averages.append(entry['avg'])
+
+    return generations, best_particles, best_fitnesses, averages
+
+
+def read_json_file_PSO_pp(file_name):
+    with open(file_name, 'r') as f:
+        data = json.load(f)
+
+    generations = []
+    best_particles = []
+    best_fitnesses = []
+    averages = []
+
+    for entry in data:
+        generations.append(entry['gen'])
+        best_particles.append(entry['best_particle'])
+        best_fitnesses.append(entry['max'])
+        averages.append(entry['avg'])
+
+    return generations, best_particles, best_fitnesses, averages
+
+
+def read_json_file_BO_benchmark_1(file_name):
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+
+    iterations = []
+    best_parameters = []
+    best_nses = []
+
+    for line in lines:
+        entry = json.loads(line)
+        iterations.append(entry['iteration'])
+        best_parameters.append(entry['best_parameters'])
+        best_nses.append(entry['best_nse'])
+
+    return iterations, best_parameters, best_nses
+
+
+def read_json_file_BO_benchmark(file_name):
+    with open(file_name, 'r') as file:
+        data = json.load(file)
+
+    iteration = []
+    best_parameters = []
+    best_nses = []
+    avg_fitness_values = []
+
+    for entry in data:
+        iteration.append(entry['iteration'])
+        best_parameters.append(entry['best_parameters'])
+        best_nses.append(entry['best_nse'])
+
+    return iteration, best_parameters, best_nses
 
 def plot_best_nash(iterations, best_nash, seed=0, save=False):
     plt.figure(figsize=(10, 5))
@@ -65,17 +151,22 @@ def plot_parameter_evolution(iterations, parameters, param_names, seed=0, save=F
     plt.show()
 
 
-def create_combined_dataframe(individual):
-    PREC_INPUT_FILE = "rainfall_pp_filtered.csv"
+def create_combined_dataframe(individual, box_da=True):
+    PREC_INPUT_FILE = "inputs/rainfall_pp_filtered.csv"
     rainfall = pd.read_csv(PREC_INPUT_FILE)['rain'] * 0.0254
 
     thetaR, thetaS, alpha, n, Ks, psi0 = individual
     pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'psi0': psi0, 'neta': 0.5, 'Ss': 0.000001}
-    WB = run.run_Richards(PREC_INPUT_FILE, pars)['S']
+    WB = run_richards_pp.run_Richards(PREC_INPUT_FILE, pars)['S']
     WB = (WB - WB.min()) / 10
-    obs = pd.read_csv('outflow_clipped_box_da.csv')['flow']
 
-    date = pd.read_csv('outflow_box_da.csv')['date']
+    if box_da:
+        obs = pd.read_csv('inputs/outflow_clipped_box_da.csv')['flow']
+    else:
+        obs = pd.read_csv('inputs/outflow_clipped_box_dc.csv')['flow']
+        obs = obs.shift(-3)
+
+    date = pd.read_csv('inputs/outflow_box_da.csv')['date']
 
     obs = obs[:len(WB)]
     date = date[:len(WB)]
@@ -84,14 +175,27 @@ def create_combined_dataframe(individual):
 
 
 def create_combined_dataframe_benchmark(individual):
-    PREC_INPUT_FILE = r"C:\Users\ebz238\PycharmProjects\openRE\infiltrationproblem\input\infiltration.dat"
+    PREC_INPUT_FILE = "inputs/infiltration.dat"
     rainfall = np.loadtxt(PREC_INPUT_FILE, skiprows=1, delimiter=',', usecols=1) / 1000
-    thetaR, thetaS, alpha, n = individual
-    pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': 0.0496, 'psi0': 3.59, 'neta': 0.5, 'Ss': 0.000001}
-    WB = run_original.run_Richards(PREC_INPUT_FILE, pars)['QOUT']
-    obs_file = r"C:\Users\ebz238\PycharmProjects\openRE\parameter_optimization\output.csv"
-    obs = pd.read_csv(obs_file)['QOUT']
-    combined_dataframe = pd.DataFrame({'modeled': WB*1000, 'observed': obs*1000, 'rainfall': rainfall*1000})
+    rainfall = rainfall[:int(len(rainfall) / 4)]
+    thetaR, thetaS, alpha, n, Ks = individual
+    pars = {'thetaR': thetaR, 'thetaS': thetaS, 'alpha': alpha, 'n': n, 'Ks': Ks, 'neta': 0.5, 'Ss': 0.000001}
+    WB = run_richards_benchmark.run_Richards(PREC_INPUT_FILE, pars)['S']
+    WB = (WB - WB.min()) / 10
+    obs_file = r"inputs/observed_benchmark.csv"
+    obs = pd.read_csv(obs_file)['S']
+
+    modeled = np.array(WB) * 1000
+    observed = np.array(obs) * 1000
+    rainfall = np.array(rainfall) * 1000
+
+    max_length = max(len(modeled), len(observed), len(rainfall))
+
+    modeled_padded = np.pad(modeled, (0, max_length - len(modeled)), constant_values=np.nan)
+    observed_padded = np.pad(observed, (0, max_length - len(observed)), constant_values=np.nan)
+    rainfall_padded = np.pad(rainfall, (0, max_length - len(rainfall)), constant_values=np.nan)
+
+    combined_dataframe = pd.DataFrame({'modeled': modeled_padded, 'observed': observed_padded, 'rainfall': rainfall_padded})
     return combined_dataframe
 
 
@@ -152,7 +256,8 @@ def plot_outflow_rainfall(combined_dataframe, nse, seed=0, save=False):
     plt.show()
 
 
-def plot_outflow_rainfall_benchmark(combined_dataframe, nse, seed=0, save=False):
+def plot_outflow_rainfall_benchmark(combined_dataframe, nse, seed=0, save=False, filename=''):
+    combined_dataframe = combined_dataframe.iloc[20:, :]
     plt.rcParams.update({
         'font.size': 14,         # general font size
         'axes.titlesize': 16,    # title font size
@@ -163,6 +268,7 @@ def plot_outflow_rainfall_benchmark(combined_dataframe, nse, seed=0, save=False)
     })
     # Convert 'date' column to datetime objects
     time_indices = np.arange(len(combined_dataframe))
+
 
 
     # Create a plot
@@ -182,7 +288,7 @@ def plot_outflow_rainfall_benchmark(combined_dataframe, nse, seed=0, save=False)
     # Create a second axis for precipitation
     ax2 = ax1.twinx()
 
-    ax2.bar(time_indices, combined_dataframe['rainfall'], label='Observed Rainfall', color='black', alpha=0.6)
+    ax2.bar(time_indices, combined_dataframe['rainfall'], label='Observed Rainfall', color='black', alpha=1)
     ax2.set_ylabel('Precipitation (mm)')
     ax2.legend(loc='upper right')
 
@@ -195,11 +301,11 @@ def plot_outflow_rainfall_benchmark(combined_dataframe, nse, seed=0, save=False)
     ax1.annotate(f'NSE: {nse:.2f}', xy=(0.78, 0.82), xycoords='axes fraction', fontsize=12, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round'))
 
     if save:
-        plt.savefig(f'modeled_observed_seed{seed}.png')
+        plt.savefig(f'{filename}_seed_{seed}.png')
     plt.show()
 
 
-def plot_fitness_vs_generation(generation_list, fitness_list1, fitness_list2, fitness_list3):
+def plot_fitness_vs_generation(generation_list, fitness_list1, fitness_list2, fitness_list3, save=False, filename=''):
     sns.set(style="whitegrid")
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(24, 6), sharex=True)
 
@@ -239,10 +345,12 @@ def plot_fitness_vs_generation(generation_list, fitness_list1, fitness_list2, fi
     add_best_fitness_annotation(ax3, fitness_list3, 0.65, 0.15)
 
     sns.despine(left=True, bottom=True)
+    if save:
+        plt.savefig(filename)
     plt.show()
 
 
-def plot_avg_fitness_vs_generation(generation_list, fitness_list1, fitness_list2, fitness_list3):
+def plot_avg_fitness_vs_generation(generation_list, fitness_list1, fitness_list2, fitness_list3, save=True, filename=""):
     sns.set(style="whitegrid")
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(24, 6), sharex=True)
 
@@ -269,118 +377,326 @@ def plot_avg_fitness_vs_generation(generation_list, fitness_list1, fitness_list2
     ax3.tick_params(axis='both', labelsize=12)
 
     sns.despine(left=True, bottom=True)
+    if save:
+        plt.savefig(filename)
     plt.show()
-
-# BO Asphalt
-
-# seed = 1
-# file_path = fr"C:\Users\ebz238\PycharmProjects\richards_pp_observed\Results\Asphalt\BO\JSON\bayesian_optimization_seed{seed}_box_da.json"
-# iterations, parameters, best_parameters, best_nash = read_results(file_path)
 #
-# max_value = max(best_nash)
-# max_index = best_nash.index(max_value)
-# best = best_parameters[max_index]
-# print(f"Theta R: {best[0]: .3f} \n"
-#       f"Theta S: {best[1]: .3f} \n"
-#       f"Alpha: {best[2]: .3f}\n"
-#       f"n: {best[3]: .3f}\n"
-#       f"Ks: {best[4]} \n"
-#       f"Psi0: {best[5]}")
+# #
+# # GA Box_DA
+# file_path_1 = f"outputs/GA/Box_DA/GA_seed1_DA.json"
 #
-# plot_best_nash(iterations, best_nash, seed=seed, save=True)
-# param_names = [r'$\theta_R$', r'$\theta_S$', r'$\alpha$', r'$n$', r'$K_s$', r'$\psi_0$']  # Replace with actual parameter names
-# plot_parameter_evolution(iterations, parameters, param_names, seed=seed, save=True)
+# generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_GA_pp(file_path_1)
 #
-# individual = best_parameters[-2]
+# file_path_2 = f"outputs/GA/Box_DA/GA_seed2_DA.json"
 #
-# combined_dataframe = create_combined_dataframe(individual)
+# generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_GA_pp(file_path_2)
 #
-# plot_outflow_rainfall(combined_dataframe, seed=seed, nse=best_nash[-2], save=True)
-
-
-# GA Asphalt
-file_path_1 = f"outputs/GA/Box_DA/GA_seed1_DA.json"
-
-generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_GA(file_path_1)
-
-file_path_2 = f"outputs/GA/Box_DA/GA_seed2_DA.json"
-
-generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_GA(file_path_2)
-
-file_path_3 = f"outputs/GA/Box_DA/GA_seed3_DA.json"
-
-generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_GA(file_path_3)
-
-plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3)
-plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3)
-
-
-
-
-
-# # GA Benchmark extraction
-# seed = 1
-# directory = r"C:\Users\ebz238\PycharmProjects\richards_pp_observed\Results\Benchmark\GA\JSON"
-# info = process_json_files(directory)
-# individual_seed_1 = info[seed]['individuals'][:101]
-# generations_seed_1 = info[seed]['generations'][:101]
-# nash_seed_1 = info[seed]['fitness'][:101]
+# file_path_3 = f"outputs/GA/Box_DA/GA_seed3_DA.json"
 #
-# max_value = max(nash_seed_1)
-# max_index = nash_seed_1.index(max_value)
-# best = individual_seed_1[max_index]
-# print(f"Theta R: {best[0]: .3f} \n"
-#       f"Theta S: {best[1]: .3f} \n"
-#       f"Alpha: {best[2]: .3f}\n"
-#       f"n: {best[3]: .3f}")
+# generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_GA_pp(file_path_3)
 #
-# param_names = [r'$\theta_R$', r'$\theta_S$', r'$\alpha$', r'$n$']
-# plot_parameter_evolution(generations_seed_1, individual_seed_1, param_names, seed=seed, save=True)
-# plot_best_nash(generations_seed_1, nash_seed_1, seed=seed, save=True)
-# combined_dataframe = create_combined_dataframe_benchmark(individual_seed_1[-1])
-# plot_outflow_rainfall_benchmark(combined_dataframe, nash_seed_1[-1], seed=seed, save=True)
+#
+# print(fitness_1[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+# print(', '.join(formatted_list))
+#
+# print(fitness_2[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# print(fitness_3[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='GA_box_DA.png')
+# plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='avg_box_DA.png')
+#
+# combined_dataframe = create_combined_dataframe(individual_1[-1])
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True)
 
 
-# PSO Benchmark extraction
-# seed = 1
-# file_path = rf"C:\Users\ebz238\PycharmProjects\richards_pp_observed\Results\Benchmark\PSO\JSON\logbook_seed_{seed}.json"
-# generations, best_particles, max_values = extract_data_from_json(file_path)
+# # GA Box_DC
+# file_path_1 = f"outputs/GA/Box_DC/GA_seed1_DC.json"
 #
-# max_value = max(max_values)
-# max_index = max_values.index(max_value)
-# best = best_particles[max_index]
-# print(f"Theta R: {best[0]: .3f} \n"
-#       f"Theta S: {best[1]: .3f} \n"
-#       f"Alpha: {best[2]: .3f}\n"
-#       f"n: {best[3]: .3f}")
+# generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_GA_pp(file_path_1)
 #
-# param_names = [r'$\theta_R$', r'$\theta_S$', r'$\alpha$', r'$n$']
-# plot_parameter_evolution(generations, best_particles, param_names, seed=seed, save=True)
-# plot_best_nash(generations, max_values, seed=seed, save=True)
-# combined_dataframe = create_combined_dataframe_benchmark(best_particles[-1])
-# plot_outflow_rainfall_benchmark(combined_dataframe, max(max_values), seed=seed, save=True)
+# file_path_2 = f"outputs/GA/Box_DC/GA_seed2_DC.json"
+#
+# generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_GA_pp(file_path_2)
+#
+# file_path_3 = f"outputs/GA/Box_DC/GA_seed3_DC.json"
+#
+# generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_GA_pp(file_path_3)
+#
+# print(fitness_1[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+# print(', '.join(formatted_list))
+#
+# print(fitness_2[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# print(fitness_3[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+# print(', '.join(formatted_list))
+#
+# # plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='GA_box_DC.png')
+# # plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='avg_box_DC.png')
+#
+# combined_dataframe = create_combined_dataframe(individual_1[-1], box_da=False)
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='GA_box_DC')
+
+
+# # PSO DA
+file_path_1 = f"outputs/PSO/Box_DA/logbook_seed_1.json"
+
+generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_PSO_pp(file_path_1)
+fitness_1 = best_so_far(fitness_1)
+
+file_path_2 = f"outputs/PSO/Box_DA/logbook_seed_2.json"
+
+generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_PSO_pp(file_path_2)
+fitness_2 = best_so_far(fitness_2)
+
+file_path_3 = f"outputs/PSO/Box_DA/logbook_seed_3.json"
+
+generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_PSO_pp(file_path_3)
+fitness_3 = best_so_far(fitness_3)
 
 
 
-# BO Benchmark extraction
-# seed = 1
-# file_path = rf"C:\Users\ebz238\PycharmProjects\richards_pp_observed\Results\Benchmark\BO\JSON\bayesian_optimization_seed{seed}.json"
+print(fitness_1[-1])
+formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+print(', '.join(formatted_list))
+
+print(fitness_2[-1])
+formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+print(', '.join(formatted_list))
+
+
+print(fitness_3[-1])
+formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+print(', '.join(formatted_list))
+
+plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='PSO_DA_parameters.png')
+
+
+
+# plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='PSO_avg_benchmark.png')
 #
-# iterations, best_parameters, best_nash = extract_data_from_json_BO(file_path)
+combined_dataframe = create_combined_dataframe(individual_1[-1])
+plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='PSO_hid_da')
+
+def best_so_far(arr):
+    best = [arr[0]]
+    for i in range(1, len(arr)):
+        best.append(max(best[-1], arr[i]))
+    return best
+
 #
-# max_value = max(best_nash)
-# max_index = best_nash.index(max_value)
-# best = best_parameters[max_index]
-# print(f"Theta R: {best[0]: .3f} \n"
-#       f"Theta S: {best[1]: .3f} \n"
-#       f"Alpha: {best[2]: .3f}\n"
-#       f"n: {best[3]: .3f}")
+# # # PSO DC
+# file_path_1 = f"outputs/PSO/Box_DC/logbook_seed_1.json"
 #
-# param_names = [r'$\theta_R$', r'$\theta_S$', r'$\alpha$', r'$n$']
-# plot_parameter_evolution(iterations, best_parameters, param_names, seed=seed, save=True)
-# plot_best_nash(iterations, best_nash, seed=seed, save=True)
-# combined_dataframe = create_combined_dataframe_benchmark(best_parameters[-1])
-# plot_outflow_rainfall_benchmark(combined_dataframe, best_nash[-1], seed=seed, save=True)
+# generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_PSO_pp(file_path_1)
+# fitness_1 = best_so_far(fitness_1)
+#
+# file_path_2 = f"outputs/PSO/Box_DC/logbook_seed_2.json"
+#
+# generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_PSO_pp(file_path_2)
+# fitness_2 = best_so_far(fitness_2)
+#
+# file_path_3 = f"outputs/PSO/Box_DC/logbook_seed_3.json"
+#
+# generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_PSO_pp(file_path_3)
+# fitness_3 = best_so_far(fitness_3)
+#
+# print(fitness_1[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+# print(', '.join(formatted_list))
+#
+# print(fitness_2[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# print(fitness_3[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='PSO_DC_parameters.png')
+#
+#
+# # plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='PSO_avg_DC.png')
+# #
+# combined_dataframe = create_combined_dataframe(individual_1[-1], box_da=False)
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='PSO_hid_dc')
+
+#
+# # BO Box_DA
+# file_path_1 = f"outputs/BO/Box_DA/bayesian_optimization_seed1_box_da.json"
+#
+# generation_1, individual_1, fitness_1 = read_json_file_BO_benchmark_1(file_path_1)
+#
+# file_path_2 = f"outputs/BO/Box_DA/bayesian_optimization_seed2_box_da.json"
+#
+# generation_2, individual_2, fitness_2 = read_json_file_BO_benchmark_1(file_path_2)
+#
+# file_path_3 = f"outputs/BO/Box_DA/bayesian_optimization_seed3_box_da.json"
+#
+# generation_3, individual_3, fitness_3 = read_json_file_BO_benchmark_1(file_path_3)
+#
+# # plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='BO_BoxDA_parameters.png')
+#
+# print(fitness_1[-1])
+# print(individual_1[-1])
+#
+# print(fitness_2[-1])
+# print(individual_2[-1])
+#
+# print(fitness_3[-1])
+# print(individual_3[-1])
+
+# combined_dataframe = create_combined_dataframe(individual_1[-1], box_da=True)
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='BO_box_DA_hid_benchmark')
+
+
+# # BO Box_DC
+# file_path_1 = f"outputs/BO/Box_DC/bayesian_optimization_seed1_box_da.json"
+#
+# generation_1, individual_1, fitness_1 = read_json_file_BO_benchmark_1(file_path_1)
+#
+# file_path_2 = f"outputs/BO/Box_DC/bayesian_optimization_seed2_box_da.json"
+#
+# generation_2, individual_2, fitness_2 = read_json_file_BO_benchmark_1(file_path_2)
+#
+# file_path_3 = f"outputs/BO/Box_DC/bayesian_optimization_seed3_box_da.json"
+#
+# generation_3, individual_3, fitness_3 = read_json_file_BO_benchmark_1(file_path_3)
+#
+# plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='BO_BoxDA_parameters.png')
+#
+# print(fitness_1[-1])
+# print(individual_1[-1])
+#
+# print(fitness_2[-1])
+# print(individual_2[-1])
+#
+# print(fitness_3[-1])
+# print(individual_3[-1])
+
+# combined_dataframe = create_combined_dataframe(individual_1[-1], box_da=False)
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='BO_box_DC_hid_benchmark')
+
+#
+# # GA Benchmark
+# file_path_1 = f"outputs/GA/Benchmark/2/GA_seed1_benchmark.json"
+#
+# generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_GA_benchmark(file_path_1)
+#
+# file_path_2 = f"outputs/GA/Benchmark/2/GA_seed2_benchmark.json"
+#
+# generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_GA_benchmark(file_path_2)
+#
+# file_path_3 = f"outputs/GA/Benchmark/2/GA_seed3_benchmark.json"
+#
+# generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_GA_benchmark(file_path_3)
+#
+# print(fitness_1[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+# print(', '.join(formatted_list))
+#
+# print(fitness_2[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# print(fitness_3[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+# print(', '.join(formatted_list))
+
+# #
+# # plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='GA_benchmark.png')
+# # plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='GA_avg_benchmark.png')
+#
+# combined_dataframe = create_combined_dataframe_benchmark(individual_1[-1])
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='GA_hid_benchmark')
+#
+
+
+# # # PSO Benchmark
+# file_path_1 = f"outputs/PSO/Benchmark/PSO_seed_1.json"
+#
+# generation_1, individual_1, fitness_1, avg_fitness_1 = read_json_file_PSO_benchmark(file_path_1)
+#
+# file_path_2 = f"outputs/PSO/Benchmark/PSO_seed_2.json"
+#
+# generation_2, individual_2, fitness_2, avg_fitness_2 = read_json_file_PSO_benchmark(file_path_2)
+#
+# file_path_3 = f"outputs/PSO/Benchmark/PSO_seed_3.json"
+#
+# generation_3, individual_3, fitness_3, avg_fitness_3 = read_json_file_PSO_benchmark(file_path_3)
+#
+# print(fitness_1[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_1[-1]]
+# print(', '.join(formatted_list))
+#
+# print(fitness_2[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_2[-1]]
+# print(', '.join(formatted_list))
+#
+#
+# print(fitness_3[-1])
+# formatted_list = [f"{element:.3f}" for element in individual_3[-1]]
+# print(', '.join(formatted_list))
+
+
+# plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='PSO_benchmark_parameters.png')
+#
+# print(fitness_1[-1])
+# print(individual_1[-1])
+#
+# print(fitness_2[-1])
+# print(individual_2[-1])
+#
+# print(fitness_3[-1])
+# print(individual_3[-1])
+#
+# plot_avg_fitness_vs_generation(generation_1, avg_fitness_1, avg_fitness_2, avg_fitness_3, save=True, filename='PSO_avg_benchmark.png')
+#
+# combined_dataframe = create_combined_dataframe_benchmark(individual_1[-1])
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='PSO_hid_benchmark')
+
+
+# # BO Benchmark
+# file_path_1 = f"outputs/BO/Benchmark/bayesian_optimization_seed1_box_dc.json"
+#
+# generation_1, individual_1, fitness_1 = read_json_file_BO_benchmark_1(file_path_1)
+#
+# file_path_2 = f"outputs/BO/Benchmark/bayesian_optimization_seed2_benchmark.json"
+#
+# generation_2, individual_2, fitness_2 = read_json_file_BO_benchmark(file_path_2)
+#
+# file_path_3 = f"outputs/BO/Benchmark/bayesian_optimization_seed3_benchmark.json"
+#
+# generation_3, individual_3, fitness_3 = read_json_file_BO_benchmark(file_path_3)
+#
+# # plot_fitness_vs_generation(generation_1, fitness_1, fitness_2, fitness_3, save=True, filename='BO_benchmark_parameters.png')
+#
+# print(fitness_1[-1])
+# print(individual_1[-1])
+#
+# print(fitness_2[-1])
+# print(individual_2[-1])
+#
+# print(fitness_3[-1])
+# print(individual_3[-1])
+#
+# combined_dataframe = create_combined_dataframe_benchmark(individual_1[-1])
+# plot_outflow_rainfall_benchmark(combined_dataframe, fitness_1[-1], seed=1, save=True, filename='BO_hid_benchmark')
 
 
 

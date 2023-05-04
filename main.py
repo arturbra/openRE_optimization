@@ -28,10 +28,10 @@ if __name__ == '__main__':
     # plt.show()
 
     #
-    #Run for the PP
-    #
-    # individual = [0.11794939522713252, 0.5014643011668757, 0.5697775404333506, 10.0, 0.9071343643361653, 9.964788249998058]
-    # pars = {'thetaR': individual[0], 'thetaS': individual[1], 'alpha': individual[2], 'n': individual[3], 'Ks': individual[4], 'psi0': individual[5], 'neta': 0.5, 'Ss': 0.000001}
+    # Run for the PP
+
+    # individual = [0.1298006671128676, 0.49009519861410955, 0.45312314660770364, 3.313737844977159, 5.570174014528901]
+    # pars = {'thetaR': individual[0], 'thetaS': individual[1], 'alpha': individual[2], 'n': individual[3], 'Ks': individual[4], 'neta': 0.5, 'Ss': 0.000001}
     #
     # prec_pp = "inputs/rainfall_pp_filtered.csv"
     # wb = run_richards_pp.run_Richards(prec_pp, pars)['S']
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # plt.plot(wb)
     # plt.plot(obs_df)
     # plt.show()
-    #
+
 
     
     # ## GA calibration benchmark
@@ -56,11 +56,11 @@ if __name__ == '__main__':
     # for s in range(1, 4):
     #     run_GA.water_flow_calibration(toolbox, calibration, s)
 
-    ## PSO benchmark
-    toolbox = run_PSO.create_toolbox()
-    toolbox.register("map", futures.map)
-    for s in range(1, 4):
-        _, logbook, best_params = run_PSO.run_pso(s, toolbox)
+    # ## PSO benchmark
+    # toolbox = run_PSO.create_toolbox()
+    # toolbox.register("map", futures.map)
+    # for s in range(1, 4):
+    #     _, logbook, best_params = run_PSO.run_pso(s, toolbox)
 
 
     # ## BO benchmark
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     #     _, logbook, best_params = run_PSO.run_pso(toolbox, s)
 
 
-    # # BO pp
-    # for s in range(1, 4):
-    #     run_BO.run_bayesian_optimization(s)
+    # BO pp
+    for s in range(1, 4):
+        run_BO.run_bayesian_optimization(s, benchmark=False)
 

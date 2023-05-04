@@ -107,7 +107,7 @@ def run_bayesian_optimization(seed, benchmark=True):
     end_time = time.time()
     total_time = (end_time - start_time) / 60
     print(f'Total time: {total_time: .2f} minutes')
-    json_filename = f"bayesian_optimization_seed{seed}_benchmark.json"
+    json_filename = f"bayesian_optimization_seed{seed}_dc.json"
     # Get the best parameters
     best_params = result.x
     best_nse = -result.fun
